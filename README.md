@@ -1,5 +1,14 @@
 # Clypt
 
+<p align="center">
+  <img
+    width="885"
+    height="799"
+    alt="Screenshot 2026-05-03 at 2 18 43 PM"
+    src="https://github.com/user-attachments/assets/46e5c420-8099-44f7-a77b-698c53f07706"
+  />
+</p>
+#
 **Clypt** is a fast, modern web app for downloading video and audio from 1,000+ sites — YouTube, Vimeo, Twitter/X, Instagram, SoundCloud, TikTok, and many more — powered by [yt-dlp](https://github.com/yt-dlp/yt-dlp).
 
 ![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=nextdotjs)
