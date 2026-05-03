@@ -72,7 +72,7 @@ pnpm install
 cp .env.example .env.local
 
 # 4. Start the dev server
-pnpm --filter @workspace/clypt-next run dev
+pnpm --filter run dev
 ```
 
 The app will be available at `http://localhost:3000`.
