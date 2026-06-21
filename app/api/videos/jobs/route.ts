@@ -4,7 +4,7 @@ import os from 'os';
 import path from 'path';
 import fs from 'fs';
 import { jobs, type Job } from '@/lib/jobs-store';
-import { ytDlpPath, isAudioFormat } from '@/lib/ytdlp';
+import { ytDlpPath, ffmpegPath, isAudioFormat } from '@/lib/ytdlp';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -17,7 +17,7 @@ function emit(job: Job, event: object) {
 
 function convertToGif(inputPath: string, outputPath: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    const proc = spawn('ffmpeg', ['-i', inputPath, '-vf', 'fps=12,scale=640:-1:flags=lanczos', '-loop', '0', '-y', outputPath]);
+    const proc = spawn(ffmpegPath(), ['-i', inputPath, '-vf', 'fps=12,scale=640:-1:flags=lanczos', '-loop', '0', '-y', outputPath]);
     let stderr = '';
     proc.stderr.on('data', (chunk: Buffer) => { stderr += chunk.toString(); });
     const t = setTimeout(() => { proc.kill(); reject(new Error('GIF conversion timed out')); }, 5 * 60 * 1000);
@@ -50,6 +50,7 @@ export async function POST(req: Request) {
   const args: string[] = [
     '--no-playlist', '-f', formatId, '-o', outputTemplate,
     '--print', 'after_move:filepath', '--newline',
+    '--ffmpeg-location', path.dirname(ffmpegPath()),
   ];
 
   if (isAudio) {

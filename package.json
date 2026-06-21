@@ -6,7 +6,7 @@
     "dev": "next dev --port $PORT",
     "build": "next build",
     "start": "next start --port $PORT",
-    "postinstall": "node scripts/install-ytdlp.mjs"
+    "postinstall": "node scripts/install-ytdlp.mjs && node scripts/install-ffmpeg.mjs"
   },
   "dependencies": {
     "@radix-ui/react-label": "^2.1.3",

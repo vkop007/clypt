@@ -1,12 +1,11 @@
 import path from 'path';
 import fs from 'fs';
+import os from 'os';
 
 /**
- * Resolves the path to the yt-dlp binary using the following priority:
- *
- * 1. YTDLP_PATH environment variable (explicit user override)
- * 2. ./bin/yt-dlp bundled by the postinstall script (used in Vercel deployments)
- * 3. 'yt-dlp' on the system PATH (local development)
+ * Resolves the path to the yt-dlp binary.
+ * If bundled binary exists but is not executable (e.g. read-only filesystem in Lambda/Amplify),
+ * it copies it to /tmp/yt-dlp, chmods it, and executes it from there.
  */
 export function ytDlpPath(): string {
   if (process.env.YTDLP_PATH) return process.env.YTDLP_PATH;
@@ -16,9 +15,89 @@ export function ytDlpPath(): string {
     'bin',
     process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp'
   );
-  if (fs.existsSync(bundled)) return bundled;
+
+  if (fs.existsSync(bundled)) {
+    if (process.platform === 'win32') {
+      return bundled;
+    }
+    // Check if the bundled binary is executable
+    try {
+      fs.accessSync(bundled, fs.constants.X_OK);
+      return bundled;
+    } catch {
+      // Not executable (common in AWS Lambda/Amplify deployment archives)
+      const tmpPath = path.join(os.tmpdir(), 'yt-dlp');
+      try {
+        const bundledStats = fs.statSync(bundled);
+        let shouldCopy = true;
+        if (fs.existsSync(tmpPath)) {
+          const tmpStats = fs.statSync(tmpPath);
+          if (tmpStats.size === bundledStats.size) {
+            shouldCopy = false;
+          }
+        }
+        if (shouldCopy) {
+          fs.copyFileSync(bundled, tmpPath);
+        }
+        fs.chmodSync(tmpPath, 0o755);
+        return tmpPath;
+      } catch (err) {
+        console.error('Failed to copy and chmod yt-dlp to /tmp:', err);
+        return bundled;
+      }
+    }
+  }
 
   return 'yt-dlp';
+}
+
+/**
+ * Resolves the path to the ffmpeg binary.
+ * If bundled binary exists but is not executable, it copies it to /tmp/ffmpeg,
+ * chmods it, and executes it from there.
+ */
+export function ffmpegPath(): string {
+  if (process.env.FFMPEG_PATH) return process.env.FFMPEG_PATH;
+
+  const bundled = path.join(
+    process.cwd(),
+    'bin',
+    process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg'
+  );
+
+  if (fs.existsSync(bundled)) {
+    if (process.platform === 'win32') {
+      return bundled;
+    }
+    // Check if the bundled binary is executable
+    try {
+      fs.accessSync(bundled, fs.constants.X_OK);
+      return bundled;
+    } catch {
+      // Not executable
+      const tmpPath = path.join(os.tmpdir(), 'ffmpeg');
+      try {
+        const bundledStats = fs.statSync(bundled);
+        let shouldCopy = true;
+        if (fs.existsSync(tmpPath)) {
+          const tmpStats = fs.statSync(tmpPath);
+          if (tmpStats.size === bundledStats.size) {
+            shouldCopy = false;
+          }
+        }
+        if (shouldCopy) {
+          fs.copyFileSync(bundled, tmpPath);
+        }
+        fs.chmodSync(tmpPath, 0o755);
+        return tmpPath;
+      } catch (err) {
+        console.error('Failed to copy and chmod ffmpeg to /tmp:', err);
+        return bundled;
+      }
+    }
+  }
+
+  return 'ffmpeg';
 }
 
 export type OutputFormat = 'mp4' | 'webm' | 'mp3' | 'm4a' | 'wav' | 'ogg' | 'gif';
