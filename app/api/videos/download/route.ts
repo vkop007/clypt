@@ -3,7 +3,7 @@ import { randomUUID } from 'crypto';
 import os from 'os';
 import path from 'path';
 import fs from 'fs';
-import { ytDlpPath, isAudioFormat } from '@/lib/ytdlp';
+import { ytDlpPath, ffmpegPath, isAudioFormat } from '@/lib/ytdlp';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -13,7 +13,7 @@ const PROGRESS_RE = /\[download\]\s+(\d+\.?\d*)%\s+of\s+(\S+)\s+at\s+(\S+)\s+ETA
 
 function convertToGif(inputPath: string, outputPath: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    const proc = spawn('ffmpeg', [
+    const proc = spawn(ffmpegPath(), [
       '-i', inputPath,
       '-vf', 'fps=12,scale=640:-1:flags=lanczos',
       '-loop', '0', '-y', outputPath,
@@ -51,6 +51,7 @@ export async function POST(req: Request) {
     '--no-playlist', '-f', formatId,
     '-o', outputTemplate,
     '--print', 'after_move:filepath', '--newline',
+    '--ffmpeg-location', path.dirname(ffmpegPath()),
   ];
 
   if (isAudio) {

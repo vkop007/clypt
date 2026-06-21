@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /**
- * Downloads the yt-dlp standalone binary for the current platform and
- * saves it to ./bin/yt-dlp so it is bundled into the Vercel deployment.
+ * Downloads the ffmpeg standalone binary for the current platform/arch
+ * and saves it to ./bin/ffmpeg so it is bundled into the deployment.
  *
  * Skips if:
- *  - YTDLP_PATH env var is set (user manages the binary themselves)
+ *  - FFMPEG_PATH env var is set (user manages the binary themselves)
  *  - the binary already exists in ./bin/
- *  - yt-dlp is already available on the system PATH
+ *  - ffmpeg is already available on the system PATH
  */
 
 import { execSync } from 'child_process';
@@ -14,43 +14,43 @@ import { existsSync, mkdirSync, chmodSync, writeFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { get } from 'https';
-import { IncomingMessage } from 'http';
+import zlib from 'zlib';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const BIN_DIR = join(__dirname, '..', 'bin');
 const IS_WIN = process.platform === 'win32';
-const BIN_PATH = join(BIN_DIR, IS_WIN ? 'yt-dlp.exe' : 'yt-dlp');
-
-const RELEASE_URLS = {
-  linux:  'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux',
-  darwin: 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos',
-  win32:  'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe',
-};
+const BIN_PATH = join(BIN_DIR, IS_WIN ? 'ffmpeg.exe' : 'ffmpeg');
 
 // 1. Honour explicit user override — nothing to do
-if (process.env.YTDLP_PATH) {
-  console.log('[clypt] YTDLP_PATH is set — skipping binary download');
+if (process.env.FFMPEG_PATH) {
+  console.log('[clypt] FFMPEG_PATH is set — skipping binary download');
   process.exit(0);
 }
 
 // 2. Binary already downloaded
 if (existsSync(BIN_PATH)) {
-  console.log('[clypt] yt-dlp binary already present at', BIN_PATH);
+  console.log('[clypt] ffmpeg binary already present at', BIN_PATH);
   process.exit(0);
 }
 
-// 3. yt-dlp already on system PATH (local dev)
+// 3. ffmpeg already on system PATH (local dev)
 try {
   if (process.env.FORCE_DOWNLOAD !== '1') {
-    execSync('yt-dlp --version', { stdio: 'ignore' });
-    console.log('[clypt] yt-dlp found on system PATH — skipping download');
+    execSync('ffmpeg -version', { stdio: 'ignore' });
+    console.log('[clypt] ffmpeg found on system PATH — skipping download');
     process.exit(0);
   }
 } catch {}
 
 // 4. Download the binary
-const url = RELEASE_URLS[process.platform] ?? RELEASE_URLS.linux;
-console.log(`[clypt] Downloading yt-dlp for platform "${process.platform}" from GitHub…`);
+const platform = process.platform;
+let arch = process.arch;
+if (arch === 'x32') arch = 'ia32';
+
+const filename = `ffmpeg-${platform}-${arch}.gz`;
+const url = `https://github.com/eugeneware/ffmpeg-static/releases/download/b6.1.1/${filename}`;
+
+console.log(`[clypt] Downloading ffmpeg for platform/arch "${platform}/${arch}" from GitHub…`);
 mkdirSync(BIN_DIR, { recursive: true });
 
 /**
@@ -83,12 +83,14 @@ fetchFollowRedirects(url)
     res.on('error', reject);
   }))
   .then((buf) => {
-    writeFileSync(BIN_PATH, buf);
+    console.log('[clypt] Decompressing gzip archive…');
+    const decompressed = zlib.gunzipSync(buf);
+    writeFileSync(BIN_PATH, decompressed);
     if (!IS_WIN) chmodSync(BIN_PATH, 0o755);
-    console.log(`[clypt] yt-dlp installed → ${BIN_PATH} (${(buf.length / 1e6).toFixed(1)} MB)`);
+    console.log(`[clypt] ffmpeg installed → ${BIN_PATH} (${(decompressed.length / 1e6).toFixed(1)} MB)`);
   })
   .catch((err) => {
-    console.error('[clypt] Failed to download yt-dlp:', err.message);
-    console.error('[clypt] Install yt-dlp manually and set YTDLP_PATH or ensure it is on PATH.');
-    // Non-fatal: allow the build to continue; the app will error at runtime if yt-dlp is missing.
+    console.error('[clypt] Failed to download ffmpeg:', err.message);
+    console.error('[clypt] Install ffmpeg manually and set FFMPEG_PATH or ensure it is on PATH.');
+    // Non-fatal: allow the build to continue
   });
