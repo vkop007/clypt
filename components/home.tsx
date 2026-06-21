@@ -115,7 +115,18 @@ export function Home() {
   const [pendingCount, setPendingCount] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { history, addItem, removeItem, clearHistory } = useDownloadHistory();
-  const { items: queueItems, addToQueue, downloadFile, removeItem: removeQueueItem, clearCompleted, activeCount } = useDownloadQueue();
+  const {
+    items: queueItems,
+    addToQueue,
+    downloadFile,
+    removeItem: removeQueueItem,
+    clearCompleted,
+    retryItem,
+    retryFailed,
+    concurrencyLimit,
+    setConcurrencyLimit,
+    activeCount,
+  } = useDownloadQueue();
   const { searches, addSearch, clearSearches } = useRecentSearches();
   const { toast } = useToast();
 
@@ -205,8 +216,8 @@ export function Home() {
   };
 
   const handleQueueAll = () => {
-    results.filter(v => !v.error && v.formats?.length > 0).forEach((video, index) => {
-      if (selectedFormats[video.url]) setTimeout(() => queueDownload(video), index * 200);
+    results.filter(v => !v.error && v.formats?.length > 0).forEach((video) => {
+      if (selectedFormats[video.url]) queueDownload(video);
     });
   };
 
@@ -541,7 +552,17 @@ export function Home() {
       </div>
 
       {/* Floating download queue */}
-      <DownloadQueue items={queueItems} onDownloadFile={downloadFile} onRemoveItem={removeQueueItem} onClearCompleted={clearCompleted} activeCount={activeCount} />
+      <DownloadQueue
+        items={queueItems}
+        onDownloadFile={downloadFile}
+        onRemoveItem={removeQueueItem}
+        onClearCompleted={clearCompleted}
+        onRetryItem={retryItem}
+        onRetryFailed={retryFailed}
+        concurrencyLimit={concurrencyLimit}
+        onConcurrencyChange={setConcurrencyLimit}
+        activeCount={activeCount}
+      />
 
       {/* Modals */}
       {showQrScanner && <QrScanner onScan={(val) => { appendUrls([val]); toast({ title: 'QR URL added' }); }} onClose={() => setShowQrScanner(false)} />}
