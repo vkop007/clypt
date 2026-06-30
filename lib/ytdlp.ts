@@ -148,3 +148,25 @@ export function parseFormats(rawFormats: RawFormat[], targetFormat: string) {
 
   return out;
 }
+
+export function cleanOldTempFiles(): void {
+  const tmpDir = os.tmpdir();
+  const now = Date.now();
+  const cutoff = 30 * 60 * 1000; // 30 minutes
+  try {
+    const files = fs.readdirSync(tmpDir);
+    for (const file of files) {
+      if (file.startsWith('clypt-')) {
+        const filePath = path.join(tmpDir, file);
+        try {
+          const stats = fs.statSync(filePath);
+          if (now - stats.mtimeMs > cutoff) {
+            fs.unlinkSync(filePath);
+          }
+        } catch {}
+      }
+    }
+  } catch (err) {
+    console.error('Failed to clean old temp files:', err);
+  }
+}

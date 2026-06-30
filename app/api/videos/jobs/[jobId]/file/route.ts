@@ -30,10 +30,13 @@ export async function GET(
   const outputPath = job.outputPath;
 
   const nodeStream = fs.createReadStream(outputPath);
-  nodeStream.on('end', () => {
-    try { fs.unlinkSync(outputPath); } catch {}
+  const cleanup = () => {
+    try { if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath); } catch {}
     jobs.delete(jobId);
-  });
+  };
+  nodeStream.on('end', cleanup);
+  nodeStream.on('close', cleanup);
+  nodeStream.on('error', cleanup);
 
   const webStream = Readable.toWeb(nodeStream) as ReadableStream;
 
