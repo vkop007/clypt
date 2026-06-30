@@ -45,7 +45,7 @@ export async function POST(req: Request) {
   const isGif = format === 'gif';
   const isAudio = isAudioFormat(format);
   const tmpDir = os.tmpdir();
-  const outputTemplate = path.join(tmpDir, `clypt-%(title).30s.%(ext)s`);
+  const outputTemplate = path.join(tmpDir, `clypt-%(title).30s-${jobId}.%(ext)s`);
 
   const args: string[] = [
     '--no-playlist', '-f', formatId, '-o', outputTemplate,
