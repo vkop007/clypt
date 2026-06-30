@@ -6,6 +6,7 @@ export const dynamic = 'force-dynamic';
 
 interface RawVideoInfo {
   title: string;
+  webpage_url?: string;
   thumbnail?: string;
   duration?: number;
   uploader?: string;
@@ -21,7 +22,7 @@ interface RawVideoInfo {
 }
 
 function fetchVideoInfo(url: string, format: string, allowPlaylist: boolean) {
-  return new Promise<object>((resolve, reject) => {
+  return new Promise<any[]>((resolve, reject) => {
     const args = ['--dump-json'];
     if (!allowPlaylist) args.push('--no-playlist');
     args.push(url);
@@ -29,20 +30,24 @@ function fetchVideoInfo(url: string, format: string, allowPlaylist: boolean) {
     const proc = execFile(ytDlpPath(), args, { maxBuffer: 10 * 1024 * 1024 }, (err, stdout) => {
       if (err) { reject(new Error(err.message.split('\n')[0])); return; }
       try {
-        const info: RawVideoInfo = JSON.parse(stdout.trim());
-        resolve({
-          url,
-          title: info.title ?? url,
-          thumbnail: info.thumbnail ?? null,
-          duration: info.duration ?? null,
-          uploader: info.uploader ?? null,
-          viewCount: info.view_count ?? null,
-          uploadDate: info.upload_date ?? null,
-          description: info.description ? info.description.slice(0, 500) : null,
-          likeCount: info.like_count ?? null,
-          formats: parseFormats(info.formats ?? [], format),
-          error: null,
+        const lines = stdout.trim().split('\n').filter(Boolean);
+        const videos = lines.map(line => {
+          const info: RawVideoInfo = JSON.parse(line);
+          return {
+            url: info.webpage_url ?? url,
+            title: info.title ?? url,
+            thumbnail: info.thumbnail ?? null,
+            duration: info.duration ?? null,
+            uploader: info.uploader ?? null,
+            viewCount: info.view_count ?? null,
+            uploadDate: info.upload_date ?? null,
+            description: info.description ? info.description.slice(0, 500) : null,
+            likeCount: info.like_count ?? null,
+            formats: parseFormats(info.formats ?? [], format),
+            error: null,
+          };
         });
+        resolve(videos);
       } catch { reject(new Error('Failed to parse video info')); }
     });
     setTimeout(() => { proc.kill(); reject(new Error('Timed out fetching video info')); }, 30000);
@@ -59,18 +64,19 @@ export async function POST(req: Request) {
   }
 
   const dedupedUrls = [...new Set(urls.map((u: string) => u.trim()).filter(Boolean))];
-  const results = await Promise.all(
+  const rawResults = await Promise.all(
     dedupedUrls.map(async (url) => {
       try {
         return await fetchVideoInfo(url, format, !!allowPlaylist);
       } catch (err) {
-        return {
+        return [{
           url, title: url, thumbnail: null, duration: null, uploader: null,
           formats: [], error: err instanceof Error ? err.message : 'Failed to fetch video info',
-        };
+        }];
       }
     })
   );
 
+  const results = rawResults.flat();
   return Response.json(results);
 }
