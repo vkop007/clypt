@@ -166,4 +166,4 @@ Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) before
 
 ## License
 
-[MIT](LICENSE) — © 2025 Clypt contributors
+[MIT](LICENSE) — © 2025 Clypt contributors.
