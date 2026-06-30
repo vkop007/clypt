@@ -55,10 +55,13 @@ export async function GET(
   const fileSize = fs.statSync(outputPath).size;
 
   const nodeStream = fs.createReadStream(outputPath);
-  nodeStream.on('end', () => {
-    try { fs.unlinkSync(outputPath); } catch {}
-    try { fs.unlinkSync(metaPath); } catch {}
-  });
+  const cleanup = () => {
+    try { if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath); } catch {}
+    try { if (fs.existsSync(metaPath)) fs.unlinkSync(metaPath); } catch {}
+  };
+  nodeStream.on('end', cleanup);
+  nodeStream.on('close', cleanup);
+  nodeStream.on('error', cleanup);
 
   const webStream = Readable.toWeb(nodeStream) as ReadableStream;
 

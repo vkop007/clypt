@@ -3,7 +3,7 @@ import { randomUUID } from 'crypto';
 import os from 'os';
 import path from 'path';
 import fs from 'fs';
-import { ytDlpPath, ffmpegPath, isAudioFormat } from '@/lib/ytdlp';
+import { ytDlpPath, ffmpegPath, isAudioFormat, cleanOldTempFiles } from '@/lib/ytdlp';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -30,6 +30,8 @@ function convertToGif(inputPath: string, outputPath: string): Promise<void> {
 }
 
 export async function POST(req: Request) {
+  try { cleanOldTempFiles(); } catch {}
+
   let body: Record<string, string>;
   try { body = await req.json(); } catch {
     return Response.json({ error: 'Invalid JSON' }, { status: 400 });
