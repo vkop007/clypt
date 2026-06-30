@@ -84,9 +84,17 @@ export async function POST(req: Request) {
       let stderr = '';
       let outputPath = '';
 
+      let stdoutBuf = '';
       proc.stdout.on('data', (chunk: Buffer) => {
-        const line = chunk.toString().trim();
-        if (line && fs.existsSync(line)) outputPath = line;
+        stdoutBuf += chunk.toString();
+        const lines = stdoutBuf.split('\n');
+        stdoutBuf = lines.pop() ?? '';
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (trimmed && fs.existsSync(trimmed)) {
+            outputPath = trimmed;
+          }
+        }
       });
 
       proc.stderr.on('data', (chunk: Buffer) => {

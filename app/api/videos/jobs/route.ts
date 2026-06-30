@@ -75,9 +75,18 @@ export async function POST(req: Request) {
   const proc = spawn(ytDlpPath(), args);
   let stderr = '';
 
+  let stdoutBuf = '';
   proc.stdout.on('data', (chunk: Buffer) => {
-    const line = chunk.toString().trim();
-    if (line && fs.existsSync(line)) { job.outputPath = line; job.filename = path.basename(line); }
+    stdoutBuf += chunk.toString();
+    const lines = stdoutBuf.split('\n');
+    stdoutBuf = lines.pop() ?? '';
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed && fs.existsSync(trimmed)) {
+        job.outputPath = trimmed;
+        job.filename = path.basename(trimmed);
+      }
+    }
   });
 
   proc.stderr.on('data', (chunk: Buffer) => {
